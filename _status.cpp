@@ -176,6 +176,9 @@ public:
                     }
                 }
             }
+        } else if (V.BLUETOOTH) {
+            V.CONTROL = fileContent(DIR.SHM +"btmixer_source");
+            V.VOLUME  = getVolume(V.CONTROL, "bluealsa");
         } else if (V.BT_MIXER && !fs::exists(DIR.SYSTEM +"devicewithbt")) {
             V.CONTROL = fileContent(DIR.SHM +"btmixer");
             V.VOLUME  = getVolume(V.CONTROL, "bluealsa");

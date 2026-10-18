@@ -28,30 +28,33 @@ inline int mapPercent(long current_db, long min_db, long max_db) {
 inline int getVolume(const std::string& CONTROL, const std::string& device = "default") {
     int percent = 0;
     snd_mixer_t *handle = nullptr;
-    snd_mixer_elem_t *elem = nullptr;
     snd_mixer_selem_id_t *sid = nullptr;
 
-    // 1. Core ALSA boilerplate
     if (snd_mixer_open(&handle, 0) < 0) return 0;
-    if (snd_mixer_attach(handle, device.c_str()) < 0) { snd_mixer_close(handle); return 0; }
-    if (snd_mixer_selem_register(handle, nullptr, nullptr) < 0) { snd_mixer_close(handle); return 0; }
-    if (snd_mixer_load(handle) < 0) { snd_mixer_close(handle); return 0; }
+    if (snd_mixer_attach(handle, device.c_str()) < 0 ||
+        snd_mixer_selem_register(handle, nullptr, nullptr) < 0 ||
+        snd_mixer_load(handle) < 0) {
+        snd_mixer_close(handle);
+        return 0;
+    }
 
-    // 2. Set up the identification token using the known name
     snd_mixer_selem_id_alloca(&sid);
-    snd_mixer_selem_id_set_index(sid, 0); // default index 0
+    snd_mixer_selem_id_set_index(sid, 0);
     snd_mixer_selem_id_set_name(sid, CONTROL.c_str());
+    snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
 
-    // 3. Direct lookup instead of a sequential loop
-    elem = snd_mixer_find_selem(handle, sid);
+    if (elem) {
+        long min_db = 0, max_db = 0, cur_db = 0;
+        bool ok = false;
 
-    // 4. Verify the target control exists and tracks playback volume
-    if (elem && snd_mixer_selem_has_playback_volume(elem)) {
-        long min_db = 0, max_db = 0, current_db = 0;
-        if (snd_mixer_selem_get_playback_dB_range(elem, &min_db, &max_db) >= 0 &&
-            snd_mixer_selem_get_playback_dB(elem, SND_MIXER_SCHN_FRONT_LEFT, &current_db) >= 0) {
-            percent = mapPercent(current_db, min_db, max_db);
+        if (snd_mixer_selem_has_playback_volume(elem)) {
+            ok = snd_mixer_selem_get_playback_dB_range(elem, &min_db, &max_db) >= 0 &&
+                 snd_mixer_selem_get_playback_dB(elem, SND_MIXER_SCHN_FRONT_LEFT, &cur_db) >= 0;
+        } else if (snd_mixer_selem_has_capture_volume(elem)) {
+            ok = snd_mixer_selem_get_capture_dB_range(elem, &min_db, &max_db) >= 0 &&
+                 snd_mixer_selem_get_capture_dB(elem, SND_MIXER_SCHN_FRONT_LEFT, &cur_db) >= 0;
         }
+        if (ok) percent = mapPercent(cur_db, min_db, max_db);
     }
 
     snd_mixer_close(handle);
