@@ -4,7 +4,6 @@
 [[ ! -e /usr/bin/pkg-config ]] && pacman -Sy --noconfirm pkgconfig
 
 bar="\n\e[44m  \e[0m"
-dir=/mnt/MPD/NAS/RPi
 
 echo -e "$bar Update source files"
 
@@ -14,6 +13,7 @@ if [[ -e /boot/kernel.img ]]; then
 	cp -f /home/x/BIG/RPi/Git/rAudio-status/* . 2> /dev/null
 elif [[ -e /boot/kernel7.img ]]; then
 	arch=armv7h
+	dir=/mnt/MPD/NAS/RPi
 	mkdir -p $dir
 	mount -t cifs //192.168.1.9/RPi $dir -o username=guest,password=
 	cp -f $dir/Git/rAudio-status/* . 2> /dev/null
