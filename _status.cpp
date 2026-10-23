@@ -177,11 +177,11 @@ public:
                 }
             }
         } else if (V.BLUETOOTH) {
-            V.CONTROL = fileContent(DIR.SHM +"btmixer_source");
-            V.VOLUME  = getVolume(V.CONTROL, "bluealsa");
-        } else if (V.BT_MIXER && !fs::exists(DIR.SYSTEM +"devicewithbt")) {
-            V.CONTROL = fileContent(DIR.SHM +"btmixer");
-            V.VOLUME  = getVolume(V.CONTROL, "bluealsa");
+            V.CONTROL = fileContent(DIR.SHM +"source");            // mac
+            V.VOLUME  = getVolume("A2DP", "bluealsa:"+ V.CONTROL); // bluealsa:XX:XX:XX:XX:XX:XX
+        } else if (V.BT_SINK && !fs::exists(DIR.SYSTEM +"devicewithbt")) {
+            V.CONTROL = fileContent(DIR.SHM +"sink");
+            V.VOLUME  = getVolume("A2DP", "bluealsa:"+ V.CONTROL);
         } else {
             V.VOLUME  = mpd_status_get_volume(status);
         }
@@ -506,7 +506,7 @@ int status() {
     S["sampling"] = V.SAMPLING;
     S["state"]    = V.STATE;
 
-    B["btsender"]     = V.BT_MIXER;
+    B["sink"]         = V.BT_SINK;
     B["librandom"]    = fs::exists(DIR.SYSTEM +"librandom");
     B["lyrics"]       = fs::exists(DIR.SYSTEM +"lyrics");
     B["relays"]       = fs::exists(DIR.SYSTEM +"relays");

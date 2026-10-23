@@ -360,38 +360,42 @@ bool get_media_transport_properties(DBusConnection* conn, const std::string& pla
         dbus_message_iter_recurse(&root_iter, &dict_iter);
 
         while (dbus_message_iter_get_arg_type(&dict_iter) == DBUS_TYPE_DICT_ENTRY) {
-            DBusMessageIter entry_iter, variant_iter, array_iter;
+            DBusMessageIter entry_iter, variant_iter;
             dbus_message_iter_recurse(&dict_iter, &entry_iter);
 
             const char* key;
             dbus_message_iter_get_basic(&entry_iter, &key);
             dbus_message_iter_next(&entry_iter);
+            dbus_message_iter_recurse(&entry_iter, &variant_iter);
 
-            if (std::string_view(key) == "Configuration") {
-                dbus_message_iter_recurse(&entry_iter, &variant_iter);
+            std::string_view k(key);
+            int type = dbus_message_iter_get_arg_type(&variant_iter);
 
-                if (dbus_message_iter_get_arg_type(&variant_iter) == DBUS_TYPE_ARRAY) {
-                    dbus_message_iter_recurse(&variant_iter, &array_iter);
+            if (k == "Configuration" && type == DBUS_TYPE_ARRAY) {
+                DBusMessageIter array_iter;
+                dbus_message_iter_recurse(&variant_iter, &array_iter);
 
-                    std::vector<uint8_t> config_bytes;
-                    while (dbus_message_iter_get_arg_type(&array_iter) == DBUS_TYPE_BYTE) {
-                        uint8_t byte_val;
-                        dbus_message_iter_get_basic(&array_iter, &byte_val);
-                        config_bytes.push_back(byte_val);
-                        dbus_message_iter_next(&array_iter);
-                    }
-
-                    CodecInfo result = decode_sampling_rate(config_bytes);
-                    if (result.sample_rate > 0) {
-                        V.SAMPLING = std::format("{:.1f}", result.sample_rate / 1000.0)
-                                     + " kHz \u2022 " + result.codec_name;
-                    }
-
-                    found_config = true;
-                    break;
+                std::vector<uint8_t> config_bytes;
+                while (dbus_message_iter_get_arg_type(&array_iter) == DBUS_TYPE_BYTE) {
+                    uint8_t byte_val;
+                    dbus_message_iter_get_basic(&array_iter, &byte_val);
+                    config_bytes.push_back(byte_val);
+                    dbus_message_iter_next(&array_iter);
                 }
+
+                CodecInfo result = decode_sampling_rate(config_bytes);
+                if (result.sample_rate > 0) {
+                    V.SAMPLING = std::format("{:.1f}", result.sample_rate / 1000.0)
+                                 + " kHz \u2022 " + result.codec_name;
+                }
+                found_config = true;
             }
-            dbus_message_iter_next(&dict_iter);
+            else if (k == "Volume" && type == DBUS_TYPE_UINT16) {
+                uint16_t raw;                                   // AVRCP absolute volume, 0-127
+                dbus_message_iter_get_basic(&variant_iter, &raw);
+                V.VOLUME = (raw * 100 + 63) / 127;              // rounded to percent
+            }
+            dbus_message_iter_next(&dict_iter);                 // no break: scan all properties
         }
     }
 
@@ -409,7 +413,7 @@ void bluezMeta() {
     DBusConnection* conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
     check_error(&err);
 
-    std::ifstream file("/srv/http/data/shm/btsource");
+    std::ifstream file("/srv/http/data/shm/source_dbus");
     if (!file) {
         std::cerr << "Error: bluezMeta\n";
         return;

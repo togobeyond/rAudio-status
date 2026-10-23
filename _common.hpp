@@ -38,7 +38,7 @@ Dir DIR;
 
 struct Var {
     bool
-        BT_MIXER    = fs::exists(DIR.SHM +"btmixer"),
+        BT_SINK     = fs::exists(DIR.SHM +"sink"),
         CAMILLADSP  = fs::exists(DIR.SYSTEM +"camilladsp"),
         COVER       = true,
         GET_COVER   = false,
