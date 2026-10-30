@@ -79,10 +79,14 @@ static void shairportParseFormat(const std::string& format
         samplerate = 44100;
         return;
     }
-    size_t pf = format.find('F', p1);        // F24
-    if (pf != std::string::npos) {
+    // bit depth field: "S16_LE" / "S24_LE" / "S32_LE" / "F24" / "F32"
+    size_t p2 = format.find('/', p1 + 1);
+    std::string field = format.substr(p1 + 1, (p2 == std::string::npos ? format.size() : p2) - p1 - 1);
+    size_t d = field.find_first_of("0123456789");
+    if (d != std::string::npos) {
         try {
-            bitdepth = std::stoi(format.substr(pf + 1, 2));
+            int v = std::stoi(field.substr(d, 2));
+            if (v == 16 || v == 20 || v == 24 || v == 32) bitdepth = v;
         } catch (...) {
             bitdepth = 16;
         }
